@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>US/UK Web Design Leads Dashboard</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;padding:0;background:#f5f5f5;}
+header{background:#1f2937;color:white;padding:1rem;text-align:center;font-size:1.6rem;}
+.container{max-width:1200px;margin:2rem auto;padding:0 1rem;}
+button{padding:0.7rem 1.2rem;font-size:1rem;cursor:pointer;margin-bottom:1rem;}
+.columns{display:flex;gap:1rem;}
+.column{background:white;flex:1;min-width:280px;padding:1rem;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);}
+.column h3{text-align:center;}
+.lead{background:#e2e8f0;margin:0.5rem 0;padding:0.7rem;border-radius:4px;cursor:grab;}
+.analytics{margin-top:1.5rem;display:flex;gap:1rem;}
+.analytics div{background:white;flex:1;padding:1rem;text-align:center;border-radius:8px;box-shadow:0 2px 6px rgba(0,0.0,0.1);}
+</style>
+</head>
+<body>
+
+<header>US/UK Website Leads</header>
+
+<div class="container">
+  <button onclick="loadLeads()">Refresh Leads</button>
+  <div class="columns">
+    <div class="column" id="New"><h3>New</h3></div>
+    <div class="column" id="Contacted"><h3>Contacted</h3></div>
+    <div class="column" id="Accepted"><h3>Accepted</h3></div>
+  </div>
+  <div class="analytics">
+    <div id="newCount">New: 0</div>
+    <div id="contactedCount">Contacted: 0</div>
+    <div id="acceptedCount">Accepted: 0</div>
+  </div>
+</div>
+
+<script>
+let leads = [];
+
+// Replace this with your backend URL from Render/Railway
+const BACKEND_URL = "https://my-lead-finder.onrender.com/jobs";
+
+async function loadLeads(){
+  try {
+    const res = await fetch(BACKEND_URL);
+    const data = await res.json();
+    leads = data.map(j=>({
+      ...j,
+      status: "New"
+    }));
+    renderLeads();
+  } catch(err) {
+    alert("Failed to load leads");
+    console.error(err);
+  }
+}
+
+function renderLeads(){
+  ["New","Contacted","Accepted"].forEach(stage=>{
+    const col = document.getElementById(stage);
+    col.innerHTML = `<h3>${stage}</h3>`;
+    leads.filter(l=>l.status===stage).forEach((lead,i)=>{
+      const div = document.createElement("div");
+      div.className="lead";
+      div.draggable=true;
+      div.id=i;
+      div.ondragstart=drag;
+      div.innerHTML=`<strong>${lead.project}</strong><br>${lead.company}<br>
+        <a href="${lead.url}" target="_blank">Contact / Apply</a>`;
+      col.appendChild(div);
+    });
+  });
+  updateCounts();
+}
+
+function drag(ev){ev.dataTransfer.setData("text",ev.target.id);}
+function allowDrop(ev){ev.preventDefault();}
+function drop(ev){ev.preventDefault();leads[ev.dataTransfer.getData("text")].status=ev.currentTarget.id;renderLeads();}
+function updateCounts(){
+  document.getElementById("newCount").innerText="New: "+leads.filter(l=>l.status==="New").length;
+  document.getElementById("contactedCount").innerText="Contacted: "+leads.filter(l=>l.status==="Contacted").length;
+  document.getElementById("acceptedCount").innerText="Accepted: "+leads.filter(l=>l.status==="Accepted").length;
+}
+
+["New","Contacted","Accepted"].forEach(stage=>{
+  const col=document.getElementById(stage);
+  col.ondragover=allowDrop;
+  col.ondrop=drop;
+});
+
+loadLeads();
+</script>
+
+</body>
+</html>

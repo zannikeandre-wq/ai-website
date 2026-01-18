@@ -1,0 +1,50 @@
+import express from "express";
+import fetch from "node-fetch";
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Keywords to find businesses needing websites
+const KEYWORDS = ["website", "web design", "wordpress", "frontend", "html", "css", "react"];
+
+// Locations to filter
+const LOCATIONS = ["United States", "United Kingdom"];
+
+app.get("/jobs", async (req, res) => {
+  try {
+    // Fetch companies from OpenCorporates (US + UK small businesses)
+    const allCompanies = [];
+
+    for (const country of ["us", "gb"]) {
+      const response = await fetch(`https://api.opencorporates.com/v0.4/companies/search?q=web&page=1&jurisdiction_code=${country}`);
+      const data = await response.json();
+      if (data.results && data.results.companies) {
+        allCompanies.push(...data.results.companies);
+      }
+    }
+
+    // Filter companies by keywords
+    const leads = allCompanies
+      .filter(c => {
+        const name = c.company.name.toLowerCase();
+        return KEYWORDS.some(k => name.includes(k));
+      })
+      .map(c => ({
+        company: c.company.name,
+        url: c.company.company_url || "#",
+        project: "Website Project",
+        location: c.company.jurisdiction_code.toUpperCase(),
+        email: "", // Optional: add if you have email scraping
+        status: "New"
+      }));
+
+    res.json(leads);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({error: err.toString()});
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
